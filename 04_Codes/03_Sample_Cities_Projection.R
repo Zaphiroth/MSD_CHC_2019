@@ -36,6 +36,9 @@ universe.pchc <- bind_rows(msd.imp, hospital.universe) %>%
   ungroup() %>% 
   select(province, city, pchc)
 
+# sample range
+sample.pick <- read_xlsx("02_Inputs/历史数据样本范围_13Cities.xlsx", sheet = 2)
+
 
 ##---- Projection ----
 # quarter sales
@@ -54,10 +57,10 @@ universe.set <- msd.quarter %>%
   left_join(msd.quarter, by = c("year", "quarter", "province", "city", "pchc", 
                                 "market", "atc3", "molecule_desc", "packid")) %>% 
   inner_join(hospital.universe[, c("pchc", "est")], by = "pchc") %>% 
-  mutate(sample_label = if_else(is.na(sales) & pchc %in% sample.pchc.list, 1, 0))
+  mutate(sample_label = if_else(pchc %in% sample.pick, 1, 0))
 
 # projection parameter
-proj.parm <- data.table(universe.set)[, {
+proj.parm <- data.table(universe.set[universe.set$sample_label == 1, ])[, {
   ux <- mean(est, na.rm = TRUE)
   uy <- mean(sales, na.rm = TRUE)
   slope <- uy / ux

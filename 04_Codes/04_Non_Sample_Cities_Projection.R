@@ -46,7 +46,7 @@ universe.city <- pchc.universe %>%
   ungroup()
 
 # universe district
-proj.market <- sample.proj %>% 
+proj.market <- msd.imp %>% 
   filter(!(city %in% unique(msd.target.city$City))) %>% 
   left_join(city.tier, by = "city") %>% 
   mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
@@ -78,7 +78,9 @@ for (i in 1:nrow(universe.city)) {
 
 universe.proj <- proj.region.list %>% 
   bind_rows() %>% 
-  mutate(slope = ifelse(slope > quantile(slope, 0.9), quantile(slope, 0.9), slope),
+  mutate(slope = ifelse(slope > quantile(slope, 0.9, na.rm = TRUE), 
+                        quantile(slope, 0.9, na.rm = TRUE), 
+                        slope),
          final_sales = sales * slope,
          year = stri_sub(quarter, 1, 4)) %>% 
   filter(final_sales > 0, !(city %in% unique(proj.market$city))) %>% 
