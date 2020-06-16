@@ -7,6 +7,19 @@
 
 
 ##---- Readin data ----
+# target city result
+servier.chc.raw <- read.xlsx("02_Inputs/CHC_MAX_16Q419Q4_0317.xlsx")
+
+msd.target.city <- servier.chc %>% 
+  filter(Channel == "CHC",
+         stri_sub(Date, 1, 4) == "2019", 
+         # City %in% target.city, 
+         MKT == "OAD", 
+         Molecule_Desc %in% market.def$Molecule) %>% 
+  mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0)) %>% 
+  select(Pack_ID, Channel, Province, City, Date, ATC3, MKT, Molecule_Desc, 
+         Prod_Desc, Pck_Desc, Corp_Desc, Sales, Units, DosageUnits)
+
 # city tier
 city.tier <- read.xlsx("02_Inputs/pchc_city_tier.xlsx") %>% 
   group_by(city) %>% 
@@ -24,7 +37,7 @@ universe.city <- pchc.universe %>%
             pop = first(na.omit(`人口`)),
             est = first(na.omit(`其中：西药药品收入（千元）`))) %>% 
   ungroup() %>% 
-  filter(!is.na(est), !is.na(pop)) %>% 
+  filter(!is.na(est), !is.na(pop), !(city %in% unique(msd.target.city$City))) %>% 
   left_join(city.tier, by = "city") %>% 
   mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
   group_by(province, city, tier) %>% 
@@ -34,6 +47,7 @@ universe.city <- pchc.universe %>%
 
 # universe district
 proj.market <- sample.proj %>% 
+  filter(!(city %in% unique(msd.target.city$City))) %>% 
   left_join(city.tier, by = "city") %>% 
   mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
   group_by(year, quarter, province, city, tier, market, atc3, molecule_desc, packid) %>% 
