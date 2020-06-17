@@ -52,7 +52,7 @@ msd.2019 <- msd.price %>%
             Units = sum(units, na.rm = TRUE),
             DosageUnits = sum(dosageunits, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  bind_rows(msd.target.city, msd.history) %>% 
+  bind_rows(msd.target.city) %>% 
   group_by(Pack_ID, Channel, Province, City, Date, ATC3, MKT, Molecule_Desc, 
            Prod_Desc, Pck_Desc, Corp_Desc) %>% 
   summarise(Sales = sum(Sales, na.rm = TRUE),
@@ -67,5 +67,46 @@ msd.2019 <- msd.price %>%
 
 write_feather(msd.2019, "03_Outputs/06_MSD_CHC_OAD_2017Q1_2019Q4.feather")
 write.xlsx(msd.2019, "03_Outputs/06_MSD_CHC_OAD_2017Q1_2019Q4.xlsx")
+
+# worksheet
+msd.target <- msd.target.city %>% 
+  group_by(Pack_ID, Channel, Province, City, Date, ATC3, MKT, Molecule_Desc, 
+           Prod_Desc, Pck_Desc, Corp_Desc) %>% 
+  summarise(Sales = sum(Sales, na.rm = TRUE),
+            Units = sum(Units, na.rm = TRUE),
+            DosageUnits = sum(DosageUnits, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(Sales = round(Sales, 2),
+         Units = round(Units),
+         DosageUnits = round(DosageUnits)) %>% 
+  filter(Sales > 0, Units > 0, DosageUnits > 0) %>% 
+  arrange(Date, Province, City, Pack_ID)
+
+msd.universe <- msd.price %>% 
+  filter(!(city %in% unique(msd.target.city$City))) %>% 
+  left_join(corp.pack, by = "packid") %>% 
+  left_join(prod.desc, by = "packid") %>% 
+  mutate(Channel = "CHC",
+         dosageunits = PckSize_Desc * units) %>% 
+  group_by(Pack_ID = packid, Channel, Province = province, City = city, 
+           Date = quarter, ATC3 = atc3, MKT = market, Molecule_Desc = molecule_desc, 
+           Prod_Desc = Prd_desc, Pck_Desc, Corp_Desc) %>% 
+  summarise(Sales = sum(sales, na.rm = TRUE),
+            Units = sum(units, na.rm = TRUE),
+            DosageUnits = sum(dosageunits, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(Sales = round(Sales, 2),
+         Units = round(Units),
+         DosageUnits = round(DosageUnits)) %>% 
+  filter(Sales > 0, Units > 0, DosageUnits > 0) %>% 
+  arrange(Date, Province, City, Pack_ID)
+
+wb <- createWorkbook()
+addWorksheet(wb, "City")
+addWorksheet(wb, "National")
+writeDataTable(wb, "City", msd.target)
+writeDataTable(wb, "National", msd.universe)
+saveWorkbook(wb, "03_Outputs/06_MSD_CHC_OAD_2019_Split.xlsx")
+
 
 
