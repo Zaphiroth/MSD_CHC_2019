@@ -64,7 +64,7 @@ ims.pack.info <- ims.pack.raw %>%
   distinct(packid = Pack_ID, atc4 = ATC4_Code, molecule = Molecule_Desc)
 
 # target city
-# target.city <- c("北京", "上海", "广州", "杭州", "苏州", "南京", "福州", "宁波")
+target.city <- c("北京", "上海", "广州", "杭州", "苏州", "南京", "福州", "宁波")
 
 
 ##---- Formatting ----

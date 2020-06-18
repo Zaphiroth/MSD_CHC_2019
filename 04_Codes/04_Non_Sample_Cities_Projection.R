@@ -16,7 +16,15 @@ msd.target.city <- servier.chc %>%
          # City %in% target.city, 
          MKT == "OAD", 
          Molecule_Desc %in% market.def$Molecule) %>% 
-  mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0)) %>% 
+  mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0),
+         Pack_ID = if_else(Prod_Desc == "JANUVIA" & 
+                             City %in% c("南京", "苏州"), 
+                           "4268602", 
+                           Pack_ID),
+         Pck_Desc = if_else(Prod_Desc == "JANUVIA" & 
+                              City %in% c("南京", "苏州"), 
+                            "TAB FLM CTD 100MG    7", 
+                            Pck_Desc)) %>% 
   select(Pack_ID, Channel, Province, City, Date, ATC3, MKT, Molecule_Desc, 
          Prod_Desc, Pck_Desc, Corp_Desc, Sales, Units, DosageUnits)
 
@@ -47,7 +55,8 @@ universe.city <- pchc.universe %>%
 
 # universe district
 proj.market <- msd.imp %>% 
-  filter(!(city %in% unique(msd.target.city$City))) %>% 
+  filter(!(city %in% unique(msd.target.city$City)),
+         year == "2019") %>% 
   left_join(city.tier, by = "city") %>% 
   mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
   group_by(year, quarter, province, city, tier, market, atc3, molecule_desc, packid) %>% 

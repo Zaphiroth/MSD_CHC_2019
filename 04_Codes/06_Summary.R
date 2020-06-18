@@ -65,48 +65,43 @@ msd.2019 <- msd.price %>%
   filter(Sales > 0, Units > 0, DosageUnits > 0) %>% 
   arrange(Date, Province, City, Pack_ID)
 
-write_feather(msd.2019, "03_Outputs/06_MSD_CHC_OAD_2017Q1_2019Q4.feather")
-write.xlsx(msd.2019, "03_Outputs/06_MSD_CHC_OAD_2017Q1_2019Q4.xlsx")
+msd.universe <- msd.2019 %>% 
+  group_by(Pack_ID, Channel, Province = "National", City = "National", 
+           Date, ATC3, MKT, Molecule_Desc, Prod_Desc, Pck_Desc, Corp_Desc) %>% 
+  summarise(Sales = sum(Sales, na.rm = TRUE),
+            Units = sum(Units, na.rm = TRUE),
+            DosageUnits = sum(DosageUnits, na.rm = TRUE)) %>% 
+  ungroup()
 
-# worksheet
-msd.target <- msd.target.city %>% 
-  group_by(Pack_ID, Channel, Province, City, Date, ATC3, MKT, Molecule_Desc, 
-           Prod_Desc, Pck_Desc, Corp_Desc) %>% 
+adj.factor <- read.xlsx("02_Inputs/Adjust_Factor.xlsx") %>% 
+  mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0)) %>% 
+  setDT() %>% 
+  melt(id.vars = c("Prod_Desc", "Pack_ID"), 
+       variable.name = "City", 
+       value.name = "factor", 
+       variable.factor = FALSE)
+
+msd.result <- msd.2019 %>% 
+  filter(City %in% target.city) %>% 
+  bind_rows(msd.universe) %>% 
+  group_by(Pack_ID, Channel, Province, City, Year = stri_sub(Date, 1, 4), 
+           ATC3, MKT, Molecule_Desc, Prod_Desc, Pck_Desc, Corp_Desc) %>% 
   summarise(Sales = sum(Sales, na.rm = TRUE),
             Units = sum(Units, na.rm = TRUE),
             DosageUnits = sum(DosageUnits, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  mutate(Sales = round(Sales, 2),
-         Units = round(Units),
-         DosageUnits = round(DosageUnits)) %>% 
-  filter(Sales > 0, Units > 0, DosageUnits > 0) %>% 
-  arrange(Date, Province, City, Pack_ID)
+  left_join(adj.factor, by = c("Prod_Desc", "Pack_ID", "City")) %>% 
+  mutate(factor = if_else(is.na(factor), 1, factor),
+         Sales = round(Sales * factor, 2),
+         Units = round(Units * factor),
+         DosageUnits = round(DosageUnits * factor)) %>% 
+  select(-factor) %>% 
+  arrange(Year, Province, City, Pack_ID)
 
-msd.universe <- msd.price %>% 
-  filter(!(city %in% unique(msd.target.city$City))) %>% 
-  left_join(corp.pack, by = "packid") %>% 
-  left_join(prod.desc, by = "packid") %>% 
-  mutate(Channel = "CHC",
-         dosageunits = PckSize_Desc * units) %>% 
-  group_by(Pack_ID = packid, Channel, Province = province, City = city, 
-           Date = quarter, ATC3 = atc3, MKT = market, Molecule_Desc = molecule_desc, 
-           Prod_Desc = Prd_desc, Pck_Desc, Corp_Desc) %>% 
-  summarise(Sales = sum(sales, na.rm = TRUE),
-            Units = sum(units, na.rm = TRUE),
-            DosageUnits = sum(dosageunits, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(Sales = round(Sales, 2),
-         Units = round(Units),
-         DosageUnits = round(DosageUnits)) %>% 
-  filter(Sales > 0, Units > 0, DosageUnits > 0) %>% 
-  arrange(Date, Province, City, Pack_ID)
+write_feather(msd.result, "03_Outputs/06_MSD_CHC_OAD_2019.feather")
+write.xlsx(msd.result, "03_Outputs/06_MSD_CHC_OAD_2019.xlsx")
 
-wb <- createWorkbook()
-addWorksheet(wb, "City")
-addWorksheet(wb, "National")
-writeDataTable(wb, "City", msd.target)
-writeDataTable(wb, "National", msd.universe)
-saveWorkbook(wb, "03_Outputs/06_MSD_CHC_OAD_2019_Split.xlsx")
+
 
 
 
