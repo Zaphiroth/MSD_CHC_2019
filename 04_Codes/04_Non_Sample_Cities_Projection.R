@@ -15,7 +15,8 @@ msd.target.city <- servier.chc %>%
          stri_sub(Date, 1, 4) == "2019", 
          # City %in% target.city, 
          MKT == "OAD", 
-         Molecule_Desc %in% market.def$Molecule) %>% 
+         Molecule_Desc %in% market.def$Molecule, 
+         City != "上海") %>% 
   mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0),
          Pack_ID = if_else(Prod_Desc == "JANUVIA" & 
                              City %in% c("南京", "苏州"), 

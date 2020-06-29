@@ -20,10 +20,20 @@ hospital.universe <- pchc.universe %>%
   ungroup() %>% 
   filter(!is.na(est), !is.na(pop))
 
+# Shanghai district
+sh.seg.city <- servier.sh.raw %>% 
+  distinct(pchc = PCHC_Code, city = `城市`, district = `区县`) %>% 
+  bind_rows(hospital.universe) %>% 
+  filter(city == "上海") %>% 
+  group_by(pchc, city) %>% 
+  summarise(district = first(na.omit(district))) %>% 
+  ungroup() %>% 
+  unite("seg_city", city, district, sep = "", na.rm = TRUE)
+
 # segment
 proj.segment <- read.xlsx("02_Inputs/seg_45cities.xlsx") %>% 
-  filter(city != "上海") %>% 
-  select(city, segment = seg_up)
+  mutate(seg_city = if_else(city == "上海", paste0(city, district), city)) %>% 
+  select(seg_city, segment = seg_up)
 
 # sampel PCHC
 sample.pchc.list <- unique(msd.imp$pchc)
@@ -52,12 +62,15 @@ msd.quarter <- msd.imp %>%
 universe.set <- msd.quarter %>% 
   distinct(city, market, atc3, molecule_desc, packid) %>% 
   inner_join(universe.pchc, by = "city") %>% 
-  inner_join(proj.segment, by = "city") %>% 
+  left_join(sh.seg.city, by = "pchc") %>% 
+  mutate(seg_city = if_else(is.na(seg_city), city, seg_city)) %>% 
+  inner_join(proj.segment, by = "seg_city") %>% 
   merge(distinct(msd.quarter, year, quarter)) %>% 
   left_join(msd.quarter, by = c("year", "quarter", "province", "city", "pchc", 
                                 "market", "atc3", "molecule_desc", "packid")) %>% 
   inner_join(hospital.universe[, c("pchc", "est")], by = "pchc") %>% 
-  mutate(sample_label = if_else(pchc %in% sample.pick, 1, 0))
+  mutate(sample_label = if_else(pchc %in% sample.pick, 1, 0),
+         sample_label = if_else(city == "上海", 1, sample_label))
 
 # projection parameter
 proj.parm <- data.table(universe.set[universe.set$sample_label == 1, ])[, {

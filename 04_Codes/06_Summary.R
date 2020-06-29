@@ -102,6 +102,13 @@ write_feather(msd.result, "03_Outputs/06_MSD_CHC_OAD_2019.feather")
 write.xlsx(msd.result, "03_Outputs/06_MSD_CHC_OAD_2019.xlsx")
 
 
-
-
-
+# msd.dashboard <- msd.result %>% 
+#   setDT() %>% 
+#   melt(id.vars = c("Pack_ID", "Channel", "Province", "City", "Year", "ATC3", "MKT", 
+#                    "Molecule_Desc", "Prod_Desc", "Pck_Desc", "Corp_Desc"), 
+#        measure.vars = c("Sales", "Units", "DosageUnits"), 
+#        variable.name = "Measurement", 
+#        value.name = "Value", 
+#        variable.factor = FALSE)
+# 
+# write.xlsx(msd.dashboard, "03_Outputs/MSD_CHC_OAD_2019_Dashboard.xlsx")

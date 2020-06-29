@@ -203,7 +203,7 @@ msd.imp <- msd.in.imp %>%
   mutate(flag2 = 0) %>% 
   bind_rows(msd.out.imp)
 
-
+write_feather(msd.imp, "03_Outputs/02_MSD_CHC_Imp.feather")
 
 
 

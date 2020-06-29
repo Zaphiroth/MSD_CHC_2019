@@ -68,10 +68,40 @@ target.city <- c("北京", "上海", "广州", "杭州", "苏州", "南京", "�
 
 
 ##---- Formatting ----
+# Shanghai new sample
+servier.sh.raw <- read.xlsx("02_Inputs/raw data/shanghai_201805_202004_packid_moleinfo_PCHC.xlsx")
+
+servier.sh <- servier.sh.raw %>% 
+  mutate(year = as.character(Year),
+         date = as.character(Month),
+         quarter = ifelse(stri_sub(date, 5, 6) %in% c("01", "02", "03"), paste0(year, "Q1"), 
+                          ifelse(stri_sub(date, 5, 6) %in% c("04", "05", "06"), paste0(year, "Q2"), 
+                                 ifelse(stri_sub(date, 5, 6) %in% c("07", "08", "09"), paste0(year, "Q3"), 
+                                        ifelse(stri_sub(date, 5, 6) %in% c("10", "11", "12"), paste0(year, "Q4"), 
+                                               NA_character_)))),
+         province = "上海",
+         city =`城市`,
+         pchc = PCHC_Code,
+         atc3 = stri_sub(ATC4_Code, 1, 4),
+         molecule_desc = Molecule_Desc,
+         packid = packcode) %>% 
+  distinct() %>% 
+  filter(Molecule_Desc %in% market.def$Molecule) %>% 
+  mutate(market = "OAD") %>% 
+  select(year, date, quarter, province, city, pchc, market, atc3, molecule_desc, 
+         packid, units = `数量`, sales = `金额`)
+
+# bind
 servier.raw <- read_feather("02_Inputs/raw data/Servier_CHC_Total_Raw_2017-2019.feather")
 
-msd.raw <- servier.raw %>% 
-  filter(market == "OAD", molecule_desc %in% market.def$Molecule, year %in% c("2018", "2019"))
+msd.raw <- bind_rows(servier.raw, servier.sh) %>% 
+  filter(market == "OAD", molecule_desc %in% market.def$Molecule, year %in% c("2018", "2019")) %>% 
+  group_by(year, date, quarter, pchc, market, atc3, molecule_desc, packid) %>% 
+  summarise(province = first(na.omit(province)),
+            city = first(na.omit(city)),
+            units = sum(units, na.rm = TRUE),
+            sales = sum(sales, na.rm = TRUE)) %>% 
+  ungroup()
 
 write_feather(msd.raw, "03_Outputs/01_MSD_CHC_Raw.feather")
 
