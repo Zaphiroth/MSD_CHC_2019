@@ -95,7 +95,10 @@ servier.sh <- servier.sh.raw %>%
 servier.raw <- read_feather("02_Inputs/raw data/Servier_CHC_Total_Raw_2017-2019.feather")
 
 msd.raw <- bind_rows(servier.raw, servier.sh) %>% 
-  filter(market == "OAD", molecule_desc %in% market.def$Molecule, year %in% c("2018", "2019")) %>% 
+  filter(market == "OAD", 
+         molecule_desc %in% market.def$Molecule, 
+         year %in% c("2018", "2019")) %>% 
+  mutate(packid = if_else(packid == '4777502', '5890602', packid)) %>% 
   group_by(year, date, quarter, pchc, market, atc3, molecule_desc, packid) %>% 
   summarise(province = first(na.omit(province)),
             city = first(na.omit(city)),

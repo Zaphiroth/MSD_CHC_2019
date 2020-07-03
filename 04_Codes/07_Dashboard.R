@@ -47,6 +47,19 @@ msd.dashboard <- msd.adj %>%
 
 write.xlsx(msd.dashboard, "03_Outputs/07_MSD_Dashboard_Data.xlsx")
 
+# adjustment
+msd.dashboard <- read.xlsx("03_Outputs/07_MSD_Dashboard_Data.xlsx")
+
+msd.dashboard.adj <- msd.dashboard %>% 
+  mutate(Pack_ID = if_else(Pack_ID == '4777502', '5890602', Pack_ID), 
+         Corp_Desc = if_else(Pack_ID == '4777502', 'ASTRAZENECA GROUP', Corp_Desc)) %>% 
+  group_by(Channel, MKT, Date, Province, City, ATC3, Category, Molecule_Desc, 
+           Prod_Desc, Pck_Desc, Pack_ID, Corp_Desc, Measurement) %>% 
+  summarise(Value = sum(Value, na.rm = TRUE)) %>% 
+  ungroup()
+
+write.xlsx(msd.dashboard.adj, '03_Outputs/07_MSD_Dashboard_Data_Adjustment.xlsx')
+
 # chk <- msd.dashboard %>% 
 #   filter(is.na(DLY_DOSAGE)) %>% 
 #   distinct(Pack_ID, PROD_NAME) %>% 
@@ -54,7 +67,22 @@ write.xlsx(msd.dashboard, "03_Outputs/07_MSD_Dashboard_Data.xlsx")
 # 
 # write.xlsx(chk, "05_Internal_Review/PROD_NAME_Not_Matching.xlsx")
 
+# Beijing sample
+servier.raw.2020 <- read_feather('02_Inputs/Servier_CHC_Raw.feather')
 
+msd.bj <- servier.raw.2020 %>% 
+  filter(city == '北京', 
+         molecule_desc %in% market.def$Molecule, 
+         quarter %in% c('2019Q1', '2019Q2', '2019Q3', '2019Q4', '2020Q1')) %>% 
+  mutate(packid = if_else(packid == '4777502', '5890602', packid)) %>% 
+  left_join(msd.category, by = c('atc3' = 'ATC3')) %>% 
+  left_join(prod.desc, by = 'packid') %>% 
+  left_join(corp.pack, by = 'packid') %>% 
+  group_by(Channel = 'CHC', MKT = market, Date = quarter, ATC3 = atc3, 
+           Category, Molecule_Desc = molecule_desc, Prod_Desc = Prd_desc, 
+           Pck_Desc, Pack_ID = packid, Corp_Desc, Measurement = 'sales') %>% 
+  summarise(Value = sum(sales, na.rm = TRUE)) %>% 
+  ungroup()
 
-
+write.xlsx(msd.bj, '03_Outputs/MSD_CHC_OAD_Sample_2019Q1_2020Q1_Beijing.xlsx')
 
