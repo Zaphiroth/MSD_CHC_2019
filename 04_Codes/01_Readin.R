@@ -55,7 +55,8 @@ servier.chc.mole <- servier.chc %>%
          label = 1)
 
 molecule.check <- servier.chc.mole %>% 
-  right_join(market.def, by = c("Molecule_Desc" = "Molecule"))
+  right_join(market.def, by = c("Molecule_Desc" = "Molecule")) %>% 
+  filter(is.na(label))
 
 # IMS pack info
 ims.pack.raw <- read.xlsx("02_Inputs/ims_chpa_to20Q1.xlsx", startRow = 4, cols = 1:21)
@@ -107,6 +108,31 @@ msd.raw <- bind_rows(servier.raw, servier.sh) %>%
   ungroup()
 
 write_feather(msd.raw, "03_Outputs/01_MSD_CHC_Raw.feather")
+
+
+prod.desc <- read.csv("02_Inputs/pfc与ims数据对应.csv") %>% 
+  mutate(Pack_Id = stri_pad_left(Pack_Id, 7, 0)) %>% 
+  select(packid = Pack_Id, Prd_desc = `商品名`)
+
+raw.check <- servier.raw %>% 
+  filter(market == "OAD", 
+         molecule_desc %in% market.def$Molecule, 
+         year %in% c("2019")) %>% 
+  left_join(prod.desc, by = 'packid') %>% 
+  mutate(packid = if_else(packid == '4777502', '5890602', packid), 
+         packid = if_else(Prd_desc == 'GLUCOPHAGE', 
+                          stri_paste('64895', stri_sub(packid, 6, 7)), 
+                          packid)) %>% 
+  group_by(city) %>% 
+  mutate(pchc_n = length(unique(pchc))) %>% 
+  ungroup() %>% 
+  group_by(year, date, quarter, province, city, pchc_n, market, atc3, 
+           molecule_desc, Prd_desc) %>% 
+  summarise(units = sum(units, na.rm = TRUE),
+            sales = sum(sales, na.rm = TRUE)) %>% 
+  ungroup()
+
+write.xlsx(raw.check, '05_Internal_Review/MSD_CHC_2019_Raw.xlsx')
 
 
 

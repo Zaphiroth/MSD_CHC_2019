@@ -53,6 +53,12 @@ msd.2019 <- msd.price %>%
             DosageUnits = sum(dosageunits, na.rm = TRUE)) %>% 
   ungroup() %>% 
   bind_rows(msd.target.city) %>% 
+  mutate(Pack_ID = if_else(Pack_ID == '4777502', '5890602', Pack_ID), 
+         Corp_Desc = if_else(Pack_ID == '4777502', 'ASTRAZENECA GROUP', Corp_Desc), 
+         Pack_ID = if_else(Prod_Desc == 'GLUCOPHAGE', 
+                           stri_paste('64895', stri_sub(Pack_ID, 6, 7)), 
+                           Pack_ID), 
+         Corp_Desc = if_else(Prod_Desc == 'GLUCOPHAGE', 'MERCK GROUP', Corp_Desc)) %>% 
   group_by(Pack_ID, Channel, Province, City, Date, ATC3, MKT, Molecule_Desc, 
            Prod_Desc, Pck_Desc, Corp_Desc) %>% 
   summarise(Sales = sum(Sales, na.rm = TRUE),
