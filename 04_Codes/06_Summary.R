@@ -71,6 +71,8 @@ msd.2019 <- msd.price %>%
   filter(Sales > 0, Units > 0, DosageUnits > 0) %>% 
   arrange(Date, Province, City, Pack_ID)
 
+write.xlsx(msd.2019, '03_Outputs/MSD_CHC_Province.xlsx')
+
 msd.universe <- msd.2019 %>% 
   group_by(Pack_ID, Channel, Province = "National", City = "National", 
            Date, ATC3, MKT, Molecule_Desc, Prod_Desc, Pck_Desc, Corp_Desc) %>% 
